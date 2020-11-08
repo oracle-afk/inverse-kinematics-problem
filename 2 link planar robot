@@ -1,0 +1,541 @@
+DIM possible, direction AS INTEGER
+DIM x1, y1, x2, y2, l1, l2, rb, rs AS SINGLE
+DIM f1, f2 AS DOUBLE
+
+CONST screenwidth = 1200
+CONST screenheight = 900
+SCREEN _NEWIMAGE(screenwidth, screenheight, 256)
+
+main:
+
+CLS
+
+CALL design_axes(2, 1)
+
+PRINT "*Max radius of the robot must be smaller or equal to 450 units*"
+
+INPUT "Give the length of the first limb:", l1
+l1 = restrict(l1, l2, 0)
+INPUT "Give the length of the second limb:", l2
+l2 = restrict(l1, l2, 1)
+
+rb = l1 + l2
+rs = ABS(l1 - l2)
+
+CALL min_max(rb, rs)
+
+PRINT "X1 AND Y1 CAN'T BE ZERO AT THE SAME TIME."
+PRINT "Give cordinates for the starting point:"
+
+INPUT "X1:", x1
+
+INPUT "Y1:", y1
+
+IF (x1 ^ 2 + y1 ^ 2) >= rb ^ 2 OR (x1 ^ 2 + y1 ^ 2) <= rs ^ 2 THEN
+    DO:
+        PRINT "This point exceeds the robots max radius."
+        PRINT "Give new point."
+        INPUT "X1:", x1
+        INPUT "Y1", y1
+    LOOP UNTIL x1 ^ 2 + y1 ^ 2 < rb ^ 2 AND x1 ^ 2 + y1 ^ 2 > rs ^ 2
+
+END IF
+
+c = (x1 ^ 2 + y1 ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
+IF x1 <> 0 THEN
+    d1 = 4 * c ^ 2 * y1 ^ 2 - 4 * (y1 ^ 2 + x1 ^ 2) * (c ^ 2 - l1 ^ 2 * x1 ^ 2)
+    IF d1 < 0 THEN
+        CALL msg(2)
+    ELSE
+        ya1 = ((2 * c * y1) + d1 ^ 0.5) / (2 * (x1 ^ 2 + y1 ^ 2))
+        ya2 = ((2 * c * y1) - d1 ^ 0.5) / (2 * (x1 ^ 2 + y1 ^ 2))
+        xa1 = (c - (y1 * ya1)) / x1
+        xa2 = (c - (y1 * ya2)) / x1
+    END IF
+ELSE
+    ya1 = c / y1
+    ya2 = ya1
+    xa1 = (l1 ^ 2 - (c ^ 2 / y1 ^ 2)) ^ 0.5
+    xa2 = -(l1 ^ 2 - (c ^ 2 / y1 ^ 2)) ^ 0.5
+END IF
+
+f1 = angle(x1, y1)
+f21 = angle(x1 - xa1, y1 - ya1) - f1
+f22 = angle(x1 - xa2, y1 - ya2) - f1
+
+IF ya1 = 0 THEN
+    f2 = f22
+    t = 2
+    PRINT "One solution is not possible so the other is selected by default."
+ELSEIF ya2 = 0 THEN
+    f2 = f21
+    t = 1
+    PRINT "One solution is not possible so the other is selected by default."
+ELSE
+    INPUT "Give 1 for clock-wise rotation or 0 for reverse:", direction
+
+    f1 = angle(x1, y1)
+    f21 = angle(x1 - xa1, y1 - ya1) - f1
+    f22 = angle(x1 - xa2, y1 - ya2) - f1
+    IF direction = 0 THEN
+        IF f21 > 0 AND f21 < _PI THEN
+            f2 = f21
+            t = 1
+        ELSEIF f22 > 0 AND f22 < _PI THEN
+            f2 = f22
+            t = 2
+        END IF
+    ELSEIF direction = 1 THEN
+        IF f21 > _PI AND f21 < 2 * _PI THEN
+            f2 = f21
+            t = 1
+        ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
+            f2 = f22
+            t = 2
+        END IF
+    END IF
+END IF
+
+IF t = 1 THEN
+    xa = xa1
+    ya = ya1
+ELSEIF t = 2 THEN
+    xa = xa2
+    ya = ya2
+END IF
+
+CALL display_arm(x1, y1, xa, ya, 5)
+
+PRINT "Give cordinates for the finishing point:"
+
+INPUT "X2:", x2
+
+INPUT "Y2:", y2
+
+LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
+CALL display_arm(x1, y1, xa, ya, 5)
+
+IF (x2 ^ 2 + y2 ^ 2) >= rb ^ 2 OR (x2 ^ 2 + y2 ^ 2) <= rs ^ 2 THEN
+    DO:
+        PRINT "This point exceeds the robots max radius."
+        PRINT "Give new point."
+        INPUT "X2:", x2
+        INPUT "Y2:", y2
+    LOOP UNTIL x2 ^ 2 + y2 ^ 2 < rb ^ 2 AND x2 ^ 2 + y2 ^ 2 > rs ^ 2
+END IF
+
+possible = 0
+
+IF x1 = x2 THEN
+    IF ABS(x1) > rs THEN
+        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, 0, possible)
+    ELSE
+        xs1 = x1
+        xs2 = x1
+        ys1 = (rs ^ 2 - xs1 ^ 2) ^ 0.5
+        ys2 = -(rs ^ 2 - xs1 ^ 2) ^ 0.5
+        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, 2, possible)
+    END IF
+ELSE
+    a = (y2 - y1) / (x2 - x1)
+    b = y1 - (a * x1)
+    d = (4 * (a ^ 2) * (b ^ 2)) - (4 * ((a ^ 2) + 1) * ((b ^ 2) - (rs ^ 2)))
+    IF d < 0 OR d = 0 THEN
+        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, d, possible)
+    ELSEIF d > 0 THEN
+        xs1 = ((-2 * a * b) + (d ^ 0.5)) / (2 * ((a ^ 2) + 1))
+        ys1 = a * xs1 + b
+        xs2 = ((-2 * a * b) - (d ^ 0.5)) / (2 * ((a ^ 2) + 1))
+        ys2 = a * xs2 + b
+        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, d, possible)
+    END IF
+END IF
+
+CALL msg(possible)
+
+IF x1 <> x2 AND possible = 1 THEN
+    IF x1 > x2 THEN
+        FOR x = x1 TO x2 STEP -1
+            y = b + a * x
+            c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
+            IF x <> 0 THEN
+                d = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
+                IF d >= 0 THEN
+                    ya1 = ((2 * c * y) + d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+                    ya2 = ((2 * c * y) - d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+                    xa1 = (c - (y * ya1)) / x
+                    xa2 = (c - (y * ya2)) / x
+                END IF
+            ELSE
+                ya1 = c / y
+                ya2 = ya1
+                xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+                xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+            END IF
+            f1 = angle(x, y)
+            f21 = angle(x - xa1, y - ya1) - f1
+            f22 = angle(x - xa2, y - ya2) - f1
+            IF ya1 = 0 THEN
+                f2 = f22
+                t = 2
+            ELSEIF ya2 = 0 THEN
+                f2 = f21
+                t = 1
+            ELSE
+                f1 = angle(x, y)
+                f21 = angle(x - xa1, y - ya1) - f1
+                f22 = angle(x - xa2, y - ya2) - f1
+                IF direction = 0 THEN
+                    IF f21 > 0 AND f21 < _PI THEN
+                        f2 = f21
+                        t = 1
+                    ELSEIF f22 > 0 AND f22 < _PI THEN
+                        f2 = f22
+                        t = 2
+                    END IF
+                ELSEIF direction = 1 THEN
+                    IF f21 > _PI AND f21 < 2 * _PI THEN
+                        f2 = f21
+                        t = 1
+                    ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
+                        f2 = f22
+                        t = 2
+                    END IF
+                END IF
+            END IF
+            IF t = 1 THEN
+                xa = xa1
+                ya = ya1
+            ELSEIF t = 2 THEN
+                xa = xa2
+                ya = ya2
+            END IF
+            CALL design_axes(2, 1)
+            CALL min_max(rb, rs)
+            LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
+            CALL display_arm(x, y, xa, ya, 5)
+            delay (5000000)
+            CALL display_arm(x, y, xa, ya, 0)
+        NEXT x
+        CALL display_arm(x, y, xa, ya, 5)
+    ELSEIF x1 < x2 THEN
+        FOR x = x1 TO x2 STEP 1
+            y = b + a * x
+            c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
+            IF x <> 0 THEN
+                d = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
+                IF d >= 0 THEN
+                    ya1 = ((2 * c * y) + d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+                    ya2 = ((2 * c * y) - d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+                    xa1 = (c - (y * ya1)) / x
+                    xa2 = (c - (y * ya2)) / x
+                END IF
+            ELSE
+                ya1 = c / y
+                ya2 = ya1
+                xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+                xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+            END IF
+            f1 = angle(x, y)
+            f21 = angle(x - xa1, y - ya1) - f1
+            f22 = angle(x - xa2, y - ya2) - f1
+            IF ya1 = 0 THEN
+                f2 = f22
+                t = 2
+            ELSEIF ya2 = 0 THEN
+                f2 = f21
+                t = 1
+            ELSE
+                f1 = angle(x, y)
+                f21 = angle(x - xa1, y - ya1) - f1
+                f22 = angle(x - xa2, y - ya2) - f1
+                IF direction = 0 THEN
+                    IF f21 > 0 AND f21 < _PI THEN
+                        f2 = f21
+                        t = 1
+                    ELSEIF f22 > 0 AND f22 < _PI THEN
+                        f2 = f22
+                        t = 2
+                    END IF
+                ELSEIF direction = 1 THEN
+                    IF f21 > _PI AND f21 < 2 * _PI THEN
+                        f2 = f21
+                        t = 1
+                    ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
+                        f2 = f22
+                        t = 2
+                    END IF
+                END IF
+            END IF
+            IF t = 1 THEN
+                xa = xa1
+                ya = ya1
+            ELSEIF t = 2 THEN
+                xa = xa2
+                ya = ya2
+            END IF
+            CALL design_axes(2, 1)
+            CALL min_max(rb, rs)
+            LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
+            CALL display_arm(x, y, xa, ya, 5)
+            delay (5000000)
+            CALL display_arm(x, y, xa, ya, 0)
+        NEXT x
+        CALL display_arm(x, y, xa, ya, 5)
+    END IF
+ELSEIF x1 = x2 AND possible = 1 THEN
+    IF y1 > y2 THEN
+        FOR y = y1 TO y2 STEP -1
+            x = x1
+            c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
+            IF x <> 0 THEN
+                d = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
+                IF d >= 0 THEN
+                    ya1 = ((2 * c * y) + d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+                    ya2 = ((2 * c * y) - d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+                    xa1 = (c - (y * ya1)) / x
+                    xa2 = (c - (y * ya2)) / x
+                END IF
+            ELSE
+                ya1 = c / y
+                ya2 = ya1
+                xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+                xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+            END IF
+            f1 = angle(x, y)
+            f21 = angle(x - xa1, y - ya1) - f1
+            f22 = angle(x - xa2, y - ya2) - f1
+            IF ya1 = 0 THEN
+                f2 = f22
+                t = 2
+            ELSEIF ya2 = 0 THEN
+                f2 = f21
+                t = 1
+            ELSE
+                f1 = angle(x, y)
+                f21 = angle(x - xa1, y - ya1) - f1
+                f22 = angle(x - xa2, y - ya2) - f1
+                IF direction = 0 THEN
+                    IF f21 > 0 AND f21 < _PI THEN
+                        f2 = f21
+                        t = 1
+                    ELSEIF f22 > 0 AND f22 < _PI THEN
+                        f2 = f22
+                        t = 2
+                    END IF
+                ELSEIF direction = 1 THEN
+                    IF f21 > _PI AND f21 < 2 * _PI THEN
+                        f2 = f21
+                        t = 1
+                    ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
+                        f2 = f22
+                        t = 2
+                    END IF
+                END IF
+            END IF
+            IF t = 1 THEN
+                xa = xa1
+                ya = ya1
+            ELSEIF t = 2 THEN
+                xa = xa2
+                ya = ya2
+            END IF
+            CALL design_axes(2, 1)
+            CALL min_max(rb, rs)
+            LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
+            CALL display_arm(x, y, xa, ya, 5)
+            delay (5000000)
+            CALL display_arm(x, y, xa, ya, 0)
+        NEXT y
+        CALL display_arm(x, y, xa, ya, 5)
+    ELSEIF y1 < y2 THEN
+        FOR y = y1 TO y2 STEP 1
+            x = x1
+            c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
+            IF x <> 0 THEN
+                d = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
+                IF d >= 0 THEN
+                    ya1 = ((2 * c * y) + d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+                    ya2 = ((2 * c * y) - d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+                    xa1 = (c - (y * ya1)) / x
+                    xa2 = (c - (y * ya2)) / x
+                END IF
+            ELSE
+                ya1 = c / y
+                ya2 = ya1
+                xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+                xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+            END IF
+            f1 = angle(x, y)
+            f21 = angle(x - xa1, y - ya1) - f1
+            f22 = angle(x - xa2, y - ya2) - f1
+            IF ya1 = 0 THEN
+                f2 = f22
+                t = 2
+            ELSEIF ya2 = 0 THEN
+                f2 = f21
+                t = 1
+            ELSE
+                f1 = angle(x, y)
+                f21 = angle(x - xa1, y - ya1) - f1
+                f22 = angle(x - xa2, y - ya2) - f1
+                IF direction = 0 THEN
+                    IF f21 > 0 AND f21 < _PI THEN
+                        f2 = f21
+                        t = 1
+                    ELSEIF f22 > 0 AND f22 < _PI THEN
+                        f2 = f22
+                        t = 2
+                    END IF
+                ELSEIF direction = 1 THEN
+                    IF f21 > _PI AND f21 < 2 * _PI THEN
+                        f2 = f21
+                        t = 1
+                    ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
+                        f2 = f22
+                        t = 2
+                    END IF
+                END IF
+            END IF
+            IF t = 1 THEN
+                xa = xa1
+                ya = ya1
+            ELSEIF t = 2 THEN
+                xa = xa2
+                ya = ya2
+            END IF
+            CALL design_axes(2, 1)
+            CALL min_max(rb, rs)
+            LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
+            CALL display_arm(x, y, xa, ya, 5)
+            delay (5000000)
+            CALL display_arm(x, y, xa, ya, 0)
+        NEXT y
+        CALL display_arm(x, y, xa, ya, 5)
+    END IF
+END IF
+
+END
+
+SUB design_axes (mycolor AS INTEGER, center AS INTEGER)
+    LINE (0, screenheight / 2)-(screenwidth, screenheight / 2), mycolor
+    LINE (screenwidth / 2, 0)-(screenwidth / 2, screenheight), mycolor
+    IF center = 1 THEN
+        FOR i = 0 TO 3 STEP 0.5
+            CIRCLE (screenwidth / 2, screenheight / 2), i, mycolor
+        NEXT i
+    END IF
+END SUB
+
+SUB min_max (max AS DOUBLE, min AS DOUBLE)
+    CIRCLE (screenwidth / 2, screenheight / 2), max, 3
+    CIRCLE (screenwidth / 2, screenheight / 2), min, 4
+    IF min = 0 THEN
+        FOR i = 0 TO 3 STEP 0.5
+            CIRCLE (screenwidth / 2, screenheight / 2), i, 4
+        NEXT i
+    END IF
+END SUB
+
+SUB display_arm (xt AS SINGLE, yt AS SINGLE, xa AS SINGLE, ya AS SINGLE, k AS INTEGER)
+    LINE (getx(0), gety(0))-(getx(xa), gety(ya)), k
+    FOR i = 0 TO 3 STEP 0.5
+        CIRCLE (getx(xa), gety(ya)), i, k
+    NEXT i
+    LINE (getx(xa), gety(ya))-(getx(xt), gety(yt)), k
+    FOR i = 0 TO 3 STEP 0.5
+        CIRCLE (getx(xt), gety(yt)), i, k
+    NEXT i
+END SUB
+
+SUB distance_comp (x1, x2, xs1, xs2, y1, y2, ys1, ys2, d, possible)
+    IF d > 0 THEN
+        Dp1p2 = (((y2 - y1) ^ 2) + ((x2 - x1) ^ 2)) ^ 0.5
+        PRINT Dp1p2
+        Dp1s1 = (((ys1 - y1) ^ 2) + ((xs1 - x1) ^ 2)) ^ 0.5
+        Dp1s2 = (((ys2 - y1) ^ 2) + ((xs2 - x1) ^ 2)) ^ 0.5
+        Dp2s1 = (((ys1 - y2) ^ 2) + ((xs1 - x2) ^ 2)) ^ 0.5
+        Dp2s2 = (((ys2 - y2) ^ 2) + ((xs2 - x2) ^ 2)) ^ 0.5
+        IF Dp1s1 >= Dp1s2 THEN
+            min0 = Dp1s2
+        ELSEIF Dp1s2 > Dp1s1 THEN
+            min0 = Dp1s1
+        END IF
+        IF Dp2s1 >= Dp2s2 THEN
+            min1 = Dp2s2
+        ELSEIF Dp2s2 > Dp2s1 THEN
+            min1 = Dp2s1
+        END IF
+        IF min1 >= min0 THEN
+            max = min1
+        ELSEIF min0 > min1 THEN
+            max = min0
+        END IF
+        IF max >= Dp1p2 THEN
+            possible = 1
+        ELSEIF max < Dp1p2 THEN
+            call msg (2)
+        END IF
+    ELSEIF d <= 0 THEN
+        possible = 1
+    END IF
+END SUB
+
+SUB msg (possible AS INTEGER)
+    IF possible = 0 THEN
+        PRINT "The line intersects with the interior restriction circle."
+    ELSEIF possible = 2 THEN
+        PRINT "The line intersects with the exterior restriction circle."
+    END IF
+END SUB
+
+SUB delay (duration AS LONG)
+    FOR I = 1 TO duration
+    NEXT
+END SUB
+
+FUNCTION getx (x_cart AS SINGLE)
+    getx = screenwidth / 2 + x_cart
+END FUNCTION
+
+FUNCTION gety (y_cart AS SINGLE)
+    gety = screenheight / 2 - y_cart
+END FUNCTION
+
+FUNCTION restrict (l1 AS SINGLE, l2 AS SINGLE, b AS SINGLE)
+    IF b = 0 THEN
+        IF l1 > 450 THEN
+            DO:
+                INPUT "Must be smaller or equal to 450:", restrict
+            LOOP UNTIL restrict <= 450
+        ELSE
+            restrict = l1
+        END IF
+    ELSEIF b = 1 THEN
+        IF l1 + l2 > 450 THEN
+            DO:
+                INPUT "Max radius of the robot must be smaller or equal to 450:", restrict
+            LOOP UNTIL restrict + l1 <= 450
+        ELSE
+            restrict = l2
+        END IF
+    END IF
+END FUNCTION
+
+FUNCTION angle (x AS DOUBLE, y AS DOUBLE)
+    IF x > 0 THEN
+        IF y > 0 THEN
+            angle = ATN(y / x)
+        ELSEIF y < 0 THEN
+            angle = ATN(y / x) + (2 * _PI)
+        END IF
+    ELSEIF x < 0 THEN
+        angle = ATN(y / x) + _PI
+    ELSEIF x = 0 THEN
+        IF y > 0 THEN
+            angle = 1.57079633
+        ELSEIF y < 0 THEN
+            angle = 4.71238898
+        END IF
+    END IF
+END FUNCTION
