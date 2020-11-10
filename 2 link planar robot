@@ -1,6 +1,7 @@
+DIM SHARED x1, y1, x2, y2, ya1, ya2, ya, xa, xa1, xa2, l1, l2, t, d, d1 AS SINGLE
+DIM SHARED f1, f2, f21, f22 AS DOUBLE
 DIM possible, direction AS INTEGER
-DIM x1, y1, x2, y2, l1, l2, rb, rs AS SINGLE
-DIM f1, f2 AS DOUBLE
+DIM xs1, xs2, rb, ys1, ys2, rs, a, b, x, y AS SINGLE
 
 CONST screenwidth = 1200
 CONST screenheight = 900
@@ -36,32 +37,14 @@ IF (x1 ^ 2 + y1 ^ 2) >= rb ^ 2 OR (x1 ^ 2 + y1 ^ 2) <= rs ^ 2 THEN
         PRINT "This point exceeds the robots max radius."
         PRINT "Give new point."
         INPUT "X1:", x1
-        INPUT "Y1", y1
+        INPUT "Y1:", y1
     LOOP UNTIL x1 ^ 2 + y1 ^ 2 < rb ^ 2 AND x1 ^ 2 + y1 ^ 2 > rs ^ 2
 
 END IF
 
-c = (x1 ^ 2 + y1 ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
-IF x1 <> 0 THEN
-    d1 = 4 * c ^ 2 * y1 ^ 2 - 4 * (y1 ^ 2 + x1 ^ 2) * (c ^ 2 - l1 ^ 2 * x1 ^ 2)
-    IF d1 < 0 THEN
-        CALL msg(2)
-    ELSE
-        ya1 = ((2 * c * y1) + d1 ^ 0.5) / (2 * (x1 ^ 2 + y1 ^ 2))
-        ya2 = ((2 * c * y1) - d1 ^ 0.5) / (2 * (x1 ^ 2 + y1 ^ 2))
-        xa1 = (c - (y1 * ya1)) / x1
-        xa2 = (c - (y1 * ya2)) / x1
-    END IF
-ELSE
-    ya1 = c / y1
-    ya2 = ya1
-    xa1 = (l1 ^ 2 - (c ^ 2 / y1 ^ 2)) ^ 0.5
-    xa2 = -(l1 ^ 2 - (c ^ 2 / y1 ^ 2)) ^ 0.5
-END IF
-
-f1 = angle(x1, y1)
-f21 = angle(x1 - xa1, y1 - ya1) - f1
-f22 = angle(x1 - xa2, y1 - ya2) - f1
+x = x1
+y = y1
+CALL find_point(x, y)
 
 IF ya1 = 0 THEN
     f2 = f22
@@ -73,35 +56,6 @@ ELSEIF ya2 = 0 THEN
     PRINT "One solution is not possible so the other is selected by default."
 ELSE
     INPUT "Give 1 for clock-wise rotation or 0 for reverse:", direction
-
-    f1 = angle(x1, y1)
-    f21 = angle(x1 - xa1, y1 - ya1) - f1
-    f22 = angle(x1 - xa2, y1 - ya2) - f1
-    IF direction = 0 THEN
-        IF f21 > 0 AND f21 < _PI THEN
-            f2 = f21
-            t = 1
-        ELSEIF f22 > 0 AND f22 < _PI THEN
-            f2 = f22
-            t = 2
-        END IF
-    ELSEIF direction = 1 THEN
-        IF f21 > _PI AND f21 < 2 * _PI THEN
-            f2 = f21
-            t = 1
-        ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
-            f2 = f22
-            t = 2
-        END IF
-    END IF
-END IF
-
-IF t = 1 THEN
-    xa = xa1
-    ya = ya1
-ELSEIF t = 2 THEN
-    xa = xa2
-    ya = ya2
 END IF
 
 CALL display_arm(x1, y1, xa, ya, 5)
@@ -157,59 +111,7 @@ IF x1 <> x2 AND possible = 1 THEN
     IF x1 > x2 THEN
         FOR x = x1 TO x2 STEP -1
             y = b + a * x
-            c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
-            IF x <> 0 THEN
-                d = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
-                IF d >= 0 THEN
-                    ya1 = ((2 * c * y) + d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
-                    ya2 = ((2 * c * y) - d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
-                    xa1 = (c - (y * ya1)) / x
-                    xa2 = (c - (y * ya2)) / x
-                END IF
-            ELSE
-                ya1 = c / y
-                ya2 = ya1
-                xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-                xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-            END IF
-            f1 = angle(x, y)
-            f21 = angle(x - xa1, y - ya1) - f1
-            f22 = angle(x - xa2, y - ya2) - f1
-            IF ya1 = 0 THEN
-                f2 = f22
-                t = 2
-            ELSEIF ya2 = 0 THEN
-                f2 = f21
-                t = 1
-            ELSE
-                f1 = angle(x, y)
-                f21 = angle(x - xa1, y - ya1) - f1
-                f22 = angle(x - xa2, y - ya2) - f1
-                IF direction = 0 THEN
-                    IF f21 > 0 AND f21 < _PI THEN
-                        f2 = f21
-                        t = 1
-                    ELSEIF f22 > 0 AND f22 < _PI THEN
-                        f2 = f22
-                        t = 2
-                    END IF
-                ELSEIF direction = 1 THEN
-                    IF f21 > _PI AND f21 < 2 * _PI THEN
-                        f2 = f21
-                        t = 1
-                    ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
-                        f2 = f22
-                        t = 2
-                    END IF
-                END IF
-            END IF
-            IF t = 1 THEN
-                xa = xa1
-                ya = ya1
-            ELSEIF t = 2 THEN
-                xa = xa2
-                ya = ya2
-            END IF
+            CALL find_point(x, y)
             CALL design_axes(2, 1)
             CALL min_max(rb, rs)
             LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
@@ -221,59 +123,7 @@ IF x1 <> x2 AND possible = 1 THEN
     ELSEIF x1 < x2 THEN
         FOR x = x1 TO x2 STEP 1
             y = b + a * x
-            c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
-            IF x <> 0 THEN
-                d = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
-                IF d >= 0 THEN
-                    ya1 = ((2 * c * y) + d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
-                    ya2 = ((2 * c * y) - d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
-                    xa1 = (c - (y * ya1)) / x
-                    xa2 = (c - (y * ya2)) / x
-                END IF
-            ELSE
-                ya1 = c / y
-                ya2 = ya1
-                xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-                xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-            END IF
-            f1 = angle(x, y)
-            f21 = angle(x - xa1, y - ya1) - f1
-            f22 = angle(x - xa2, y - ya2) - f1
-            IF ya1 = 0 THEN
-                f2 = f22
-                t = 2
-            ELSEIF ya2 = 0 THEN
-                f2 = f21
-                t = 1
-            ELSE
-                f1 = angle(x, y)
-                f21 = angle(x - xa1, y - ya1) - f1
-                f22 = angle(x - xa2, y - ya2) - f1
-                IF direction = 0 THEN
-                    IF f21 > 0 AND f21 < _PI THEN
-                        f2 = f21
-                        t = 1
-                    ELSEIF f22 > 0 AND f22 < _PI THEN
-                        f2 = f22
-                        t = 2
-                    END IF
-                ELSEIF direction = 1 THEN
-                    IF f21 > _PI AND f21 < 2 * _PI THEN
-                        f2 = f21
-                        t = 1
-                    ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
-                        f2 = f22
-                        t = 2
-                    END IF
-                END IF
-            END IF
-            IF t = 1 THEN
-                xa = xa1
-                ya = ya1
-            ELSEIF t = 2 THEN
-                xa = xa2
-                ya = ya2
-            END IF
+            CALL find_point(x, y)
             CALL design_axes(2, 1)
             CALL min_max(rb, rs)
             LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
@@ -287,59 +137,7 @@ ELSEIF x1 = x2 AND possible = 1 THEN
     IF y1 > y2 THEN
         FOR y = y1 TO y2 STEP -1
             x = x1
-            c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
-            IF x <> 0 THEN
-                d = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
-                IF d >= 0 THEN
-                    ya1 = ((2 * c * y) + d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
-                    ya2 = ((2 * c * y) - d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
-                    xa1 = (c - (y * ya1)) / x
-                    xa2 = (c - (y * ya2)) / x
-                END IF
-            ELSE
-                ya1 = c / y
-                ya2 = ya1
-                xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-                xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-            END IF
-            f1 = angle(x, y)
-            f21 = angle(x - xa1, y - ya1) - f1
-            f22 = angle(x - xa2, y - ya2) - f1
-            IF ya1 = 0 THEN
-                f2 = f22
-                t = 2
-            ELSEIF ya2 = 0 THEN
-                f2 = f21
-                t = 1
-            ELSE
-                f1 = angle(x, y)
-                f21 = angle(x - xa1, y - ya1) - f1
-                f22 = angle(x - xa2, y - ya2) - f1
-                IF direction = 0 THEN
-                    IF f21 > 0 AND f21 < _PI THEN
-                        f2 = f21
-                        t = 1
-                    ELSEIF f22 > 0 AND f22 < _PI THEN
-                        f2 = f22
-                        t = 2
-                    END IF
-                ELSEIF direction = 1 THEN
-                    IF f21 > _PI AND f21 < 2 * _PI THEN
-                        f2 = f21
-                        t = 1
-                    ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
-                        f2 = f22
-                        t = 2
-                    END IF
-                END IF
-            END IF
-            IF t = 1 THEN
-                xa = xa1
-                ya = ya1
-            ELSEIF t = 2 THEN
-                xa = xa2
-                ya = ya2
-            END IF
+            CALL find_point(x, y)
             CALL design_axes(2, 1)
             CALL min_max(rb, rs)
             LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
@@ -351,59 +149,7 @@ ELSEIF x1 = x2 AND possible = 1 THEN
     ELSEIF y1 < y2 THEN
         FOR y = y1 TO y2 STEP 1
             x = x1
-            c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
-            IF x <> 0 THEN
-                d = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
-                IF d >= 0 THEN
-                    ya1 = ((2 * c * y) + d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
-                    ya2 = ((2 * c * y) - d ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
-                    xa1 = (c - (y * ya1)) / x
-                    xa2 = (c - (y * ya2)) / x
-                END IF
-            ELSE
-                ya1 = c / y
-                ya2 = ya1
-                xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-                xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-            END IF
-            f1 = angle(x, y)
-            f21 = angle(x - xa1, y - ya1) - f1
-            f22 = angle(x - xa2, y - ya2) - f1
-            IF ya1 = 0 THEN
-                f2 = f22
-                t = 2
-            ELSEIF ya2 = 0 THEN
-                f2 = f21
-                t = 1
-            ELSE
-                f1 = angle(x, y)
-                f21 = angle(x - xa1, y - ya1) - f1
-                f22 = angle(x - xa2, y - ya2) - f1
-                IF direction = 0 THEN
-                    IF f21 > 0 AND f21 < _PI THEN
-                        f2 = f21
-                        t = 1
-                    ELSEIF f22 > 0 AND f22 < _PI THEN
-                        f2 = f22
-                        t = 2
-                    END IF
-                ELSEIF direction = 1 THEN
-                    IF f21 > _PI AND f21 < 2 * _PI THEN
-                        f2 = f21
-                        t = 1
-                    ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
-                        f2 = f22
-                        t = 2
-                    END IF
-                END IF
-            END IF
-            IF t = 1 THEN
-                xa = xa1
-                ya = ya1
-            ELSEIF t = 2 THEN
-                xa = xa2
-                ya = ya2
-            END IF
+            CALL find_point(x, y)
             CALL design_axes(2, 1)
             CALL min_max(rb, rs)
             LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
@@ -424,6 +170,62 @@ SUB design_axes (mycolor AS INTEGER, center AS INTEGER)
         FOR i = 0 TO 3 STEP 0.5
             CIRCLE (screenwidth / 2, screenheight / 2), i, mycolor
         NEXT i
+    END IF
+END SUB
+
+SUB find_point (x AS SINGLE, y AS SINGLE)
+    c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
+    IF x <> 0 THEN
+        d1 = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
+        IF d1 >= 0 THEN
+            ya1 = ((2 * c * y) + d1 ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+            ya2 = ((2 * c * y) - d1 ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+            xa1 = (c - (y * ya1)) / x
+            xa2 = (c - (y * ya2)) / x
+        END IF
+    ELSE
+        ya1 = c / y
+        ya2 = ya1
+        xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+        xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
+    END IF
+    f1 = angle(x, y)
+    f21 = angle(x - xa1, y - ya1) - f1
+    f22 = angle(x - xa2, y - ya2) - f1
+    IF ya1 = 0 THEN
+        f2 = f22
+        t = 2
+    ELSEIF ya2 = 0 THEN
+        f2 = f21
+        t = 1
+    ELSE
+        f1 = angle(x, y)
+        f21 = angle(x - xa1, y - ya1) - f1
+        f22 = angle(x - xa2, y - ya2) - f1
+        IF direction = 0 THEN
+            IF f21 > 0 AND f21 < _PI THEN
+                f2 = f21
+                t = 1
+            ELSEIF f22 > 0 AND f22 < _PI THEN
+                f2 = f22
+                t = 2
+            END IF
+        ELSEIF direction = 1 THEN
+            IF f21 > _PI AND f21 < 2 * _PI THEN
+                f2 = f21
+                t = 1
+            ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
+                f2 = f22
+                t = 2
+            END IF
+        END IF
+    END IF
+    IF t = 1 THEN
+        xa = xa1
+        ya = ya1
+    ELSEIF t = 2 THEN
+        xa = xa2
+        ya = ya2
     END IF
 END SUB
 
@@ -474,7 +276,7 @@ SUB distance_comp (x1, x2, xs1, xs2, y1, y2, ys1, ys2, d, possible)
         IF max >= Dp1p2 THEN
             possible = 1
         ELSEIF max < Dp1p2 THEN
-            call msg (2)
+            CALL msg(2)
         END IF
     ELSEIF d <= 0 THEN
         possible = 1
