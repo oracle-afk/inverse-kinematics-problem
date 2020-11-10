@@ -1,7 +1,7 @@
-DIM SHARED x1, y1, x2, y2, ya1, ya2, ya, xa, xa1, xa2, l1, l2, t, d, d1 AS SINGLE
+DIM SHARED x1, y1, x2, y2, ya1, ya2, ya, xa, xa1, xa2, l1, l2, t, d, d1, a, b AS SINGLE
 DIM SHARED f1, f2, f21, f22 AS DOUBLE
 DIM possible, direction AS INTEGER
-DIM xs1, xs2, rb, ys1, ys2, rs, a, b, x, y AS SINGLE
+DIM xs1, xs2, rb, ys1, ys2, rs, x, y AS SINGLE
 
 CONST screenwidth = 1200
 CONST screenheight = 900
