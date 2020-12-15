@@ -1,7 +1,8 @@
-DIM SHARED x1, y1, x2, y2, ya1, ya2, ya, xa, xa1, xa2, l1, l2, t, d, d1, a, b AS SINGLE
-DIM SHARED f1, f2, f21, f22 AS DOUBLE
-DIM possible, direction AS INTEGER
-DIM xs1, xs2, rb, ys1, ys2, rs, x, y AS SINGLE
+DIM SHARED x1, y1, x2, y2, l1, l2, direction, t, Q, W AS SINGLE
+DIM SHARED f11, f12, f21, f22, d, d1 AS DOUBLE
+DIM SHARED ya1, ya2, xa1, xa2, xa, ya AS LONG
+DIM SHARED possible AS INTEGER
+DIM xs1, xs2, rb, ys1, ys2, rs, a, b, x, y AS SINGLE
 
 CONST screenwidth = 1200
 CONST screenheight = 900
@@ -42,22 +43,12 @@ IF (x1 ^ 2 + y1 ^ 2) >= rb ^ 2 OR (x1 ^ 2 + y1 ^ 2) <= rs ^ 2 THEN
 
 END IF
 
-x = x1
-y = y1
-CALL find_point(x, y)
+INPUT "Give 1 for clockwise rotation or 0 for counterclockwise:", direction
 
-IF ya1 = 0 THEN
-    f2 = f22
-    t = 2
+CALL find_point(x1, y1)
+IF t = 1 THEN
     PRINT "One solution is not possible so the other is selected by default."
-ELSEIF ya2 = 0 THEN
-    f2 = f21
-    t = 1
-    PRINT "One solution is not possible so the other is selected by default."
-ELSE
-    INPUT "Give 1 for clock-wise rotation or 0 for reverse:", direction
 END IF
-
 CALL display_arm(x1, y1, xa, ya, 5)
 
 PRINT "Give cordinates for the finishing point:"
@@ -78,30 +69,32 @@ IF (x2 ^ 2 + y2 ^ 2) >= rb ^ 2 OR (x2 ^ 2 + y2 ^ 2) <= rs ^ 2 THEN
     LOOP UNTIL x2 ^ 2 + y2 ^ 2 < rb ^ 2 AND x2 ^ 2 + y2 ^ 2 > rs ^ 2
 END IF
 
+INPUT "Give the time that you want the robot to move:", Q
+
 possible = 0
 
 IF x1 = x2 THEN
     IF ABS(x1) > rs THEN
-        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, 0, possible)
+        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, 0)
     ELSE
         xs1 = x1
         xs2 = x1
         ys1 = (rs ^ 2 - xs1 ^ 2) ^ 0.5
         ys2 = -(rs ^ 2 - xs1 ^ 2) ^ 0.5
-        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, 2, possible)
+        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, 2)
     END IF
 ELSE
     a = (y2 - y1) / (x2 - x1)
     b = y1 - (a * x1)
     d = (4 * (a ^ 2) * (b ^ 2)) - (4 * ((a ^ 2) + 1) * ((b ^ 2) - (rs ^ 2)))
-    IF d < 0 OR d = 0 THEN
-        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, d, possible)
+    IF d <= 0 THEN
+        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, d)
     ELSEIF d > 0 THEN
         xs1 = ((-2 * a * b) + (d ^ 0.5)) / (2 * ((a ^ 2) + 1))
         ys1 = a * xs1 + b
         xs2 = ((-2 * a * b) - (d ^ 0.5)) / (2 * ((a ^ 2) + 1))
         ys2 = a * xs2 + b
-        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, d, possible)
+        CALL distance_comp(x1, x2, xs1, xs2, y1, y2, ys1, ys2, d)
     END IF
 END IF
 
@@ -109,6 +102,7 @@ CALL msg(possible)
 
 IF x1 <> x2 AND possible = 1 THEN
     IF x1 > x2 THEN
+        W = Q / (x1 - x2)
         FOR x = x1 TO x2 STEP -1
             y = b + a * x
             CALL find_point(x, y)
@@ -116,11 +110,12 @@ IF x1 <> x2 AND possible = 1 THEN
             CALL min_max(rb, rs)
             LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
             CALL display_arm(x, y, xa, ya, 5)
-            delay (5000000)
+            _DELAY W
             CALL display_arm(x, y, xa, ya, 0)
         NEXT x
         CALL display_arm(x, y, xa, ya, 5)
     ELSEIF x1 < x2 THEN
+        W = Q / (x2 - x1)
         FOR x = x1 TO x2 STEP 1
             y = b + a * x
             CALL find_point(x, y)
@@ -128,13 +123,14 @@ IF x1 <> x2 AND possible = 1 THEN
             CALL min_max(rb, rs)
             LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
             CALL display_arm(x, y, xa, ya, 5)
-            delay (5000000)
+            _DELAY W
             CALL display_arm(x, y, xa, ya, 0)
         NEXT x
         CALL display_arm(x, y, xa, ya, 5)
     END IF
 ELSEIF x1 = x2 AND possible = 1 THEN
     IF y1 > y2 THEN
+        W = Q / (y1 - y2)
         FOR y = y1 TO y2 STEP -1
             x = x1
             CALL find_point(x, y)
@@ -142,11 +138,12 @@ ELSEIF x1 = x2 AND possible = 1 THEN
             CALL min_max(rb, rs)
             LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
             CALL display_arm(x, y, xa, ya, 5)
-            delay (5000000)
+            _DELAY W
             CALL display_arm(x, y, xa, ya, 0)
         NEXT y
         CALL display_arm(x, y, xa, ya, 5)
     ELSEIF y1 < y2 THEN
+        W = Q / (y2 - y1)
         FOR y = y1 TO y2 STEP 1
             x = x1
             CALL find_point(x, y)
@@ -154,7 +151,7 @@ ELSEIF x1 = x2 AND possible = 1 THEN
             CALL min_max(rb, rs)
             LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
             CALL display_arm(x, y, xa, ya, 5)
-            delay (5000000)
+            _DELAY W
             CALL display_arm(x, y, xa, ya, 0)
         NEXT y
         CALL display_arm(x, y, xa, ya, 5)
@@ -173,59 +170,61 @@ SUB design_axes (mycolor AS INTEGER, center AS INTEGER)
     END IF
 END SUB
 
-SUB find_point (x AS SINGLE, y AS SINGLE)
-    c = (x ^ 2 + y ^ 2 + l1 ^ 2 - l2 ^ 2) / 2
+SUB find_point (x AS INTEGER, y AS INTEGER)
+    c = ((x ^ 2) + (y ^ 2) + (l1 ^ 2) - (l2 ^ 2)) / 2
     IF x <> 0 THEN
-        d1 = 4 * c ^ 2 * y ^ 2 - 4 * (y ^ 2 + x ^ 2) * (c ^ 2 - l1 ^ 2 * x ^ 2)
+        d1 = 4 * ((c ^ 2) * (y ^ 2)) - 4 * ((y ^ 2) + (x ^ 2)) * ((c ^ 2) - ((l1 ^ 2) * (x ^ 2)))
         IF d1 >= 0 THEN
-            ya1 = ((2 * c * y) + d1 ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
-            ya2 = ((2 * c * y) - d1 ^ 0.5) / (2 * (x ^ 2 + y ^ 2))
+            o = 2 * c * y
+            p = 2 * ((x ^ 2) + (y ^ 2))
+            k = SQR(d1)
+            ya1 = (o + k) / p
+            ya2 = (o - k) / p
             xa1 = (c - (y * ya1)) / x
             xa2 = (c - (y * ya2)) / x
         END IF
     ELSE
         ya1 = c / y
-        ya2 = ya1
-        xa1 = (l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-        xa2 = -(l1 ^ 2 - (c ^ 2 / y ^ 2)) ^ 0.5
-    END IF
-    f1 = angle(x, y)
-    f21 = angle(x - xa1, y - ya1) - f1
-    f22 = angle(x - xa2, y - ya2) - f1
-    IF ya1 = 0 THEN
-        f2 = f22
-        t = 2
-    ELSEIF ya2 = 0 THEN
-        f2 = f21
-        t = 1
-    ELSE
-        f1 = angle(x, y)
-        f21 = angle(x - xa1, y - ya1) - f1
-        f22 = angle(x - xa2, y - ya2) - f1
-        IF direction = 0 THEN
-            IF f21 > 0 AND f21 < _PI THEN
-                f2 = f21
-                t = 1
-            ELSEIF f22 > 0 AND f22 < _PI THEN
-                f2 = f22
-                t = 2
-            END IF
-        ELSEIF direction = 1 THEN
-            IF f21 > _PI AND f21 < 2 * _PI THEN
-                f2 = f21
-                t = 1
-            ELSEIF f22 > _PI AND f22 < 2 * _PI THEN
-                f2 = f22
-                t = 2
-            END IF
+        ya2 = c / y
+        xa1 = SQR((l1 ^ 2) - ((c ^ 2) / (y ^ 2)))
+        xa2 = -SQR((l1 ^ 2) - ((c ^ 2) / (y ^ 2)))
+        IF ya1 = 0 THEN
+            xa = xa2
+            ya = ya2
+            t = 1
+        ELSEIF ya2 = 0 THEN
+            xa = xa1
+            ya = ya1
+            t = 1
         END IF
     END IF
-    IF t = 1 THEN
-        xa = xa1
-        ya = ya1
-    ELSEIF t = 2 THEN
-        xa = xa2
-        ya = ya2
+    IF t = 0 THEN
+        f11 = angle(xa1, ya1)
+        f21 = angle(x - xa1, y - ya1) - f11
+        f12 = angle(xa2, ya2)
+        f22 = angle(x - xa2, y - ya2) - f12
+        IF f21 < 0 THEN
+            f21 = 2 * _PI + f21
+        ELSEIF f22 < 0 THEN
+            f22 = 2 * _PI + f22
+        END IF
+        IF direction = 0 THEN
+            IF f21 >= 0 AND f21 < _PI THEN
+                xa = xa1
+                ya = ya1
+            ELSEIF f22 >= 0 AND f22 < _PI THEN
+                xa = xa2
+                ya = ya2
+            END IF
+        ELSEIF direction = 1 THEN
+            IF f21 >= _PI AND f21 < 2 * _PI THEN
+                xa = xa1
+                ya = ya1
+            ELSEIF f22 >= _PI AND f22 < 2 * _PI THEN
+                xa = xa2
+                ya = ya2
+            END IF
+        END IF
     END IF
 END SUB
 
@@ -250,7 +249,7 @@ SUB display_arm (xt AS SINGLE, yt AS SINGLE, xa AS SINGLE, ya AS SINGLE, k AS IN
     NEXT i
 END SUB
 
-SUB distance_comp (x1, x2, xs1, xs2, y1, y2, ys1, ys2, d, possible)
+SUB distance_comp (x1, x2, xs1, xs2, y1, y2, ys1, ys2, d)
     IF d > 0 THEN
         Dp1p2 = (((y2 - y1) ^ 2) + ((x2 - x1) ^ 2)) ^ 0.5
         PRINT Dp1p2
@@ -278,7 +277,7 @@ SUB distance_comp (x1, x2, xs1, xs2, y1, y2, ys1, ys2, d, possible)
         ELSEIF max < Dp1p2 THEN
             CALL msg(2)
         END IF
-    ELSEIF d <= 0 THEN
+    ELSE
         possible = 1
     END IF
 END SUB
