@@ -199,13 +199,15 @@ SUB find_point (x AS INTEGER, y AS INTEGER)
         END IF
     END IF
     IF t = 0 THEN
+
         f11 = angle(xa1, ya1)
         f21 = angle(x - xa1, y - ya1) - f11
         f12 = angle(xa2, ya2)
         f22 = angle(x - xa2, y - ya2) - f12
         IF f21 < 0 THEN
             f21 = 2 * _PI + f21
-        ELSEIF f22 < 0 THEN
+        END IF
+        IF f22 < 0 THEN
             f22 = 2 * _PI + f22
         END IF
         IF direction = 0 THEN
@@ -288,11 +290,6 @@ SUB msg (possible AS INTEGER)
     ELSEIF possible = 2 THEN
         PRINT "The line intersects with the exterior restriction circle."
     END IF
-END SUB
-
-SUB delay (duration AS LONG)
-    FOR I = 1 TO duration
-    NEXT
 END SUB
 
 FUNCTION getx (x_cart AS SINGLE)
