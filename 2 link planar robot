@@ -3,6 +3,7 @@ DIM SHARED f11, f12, f21, f22, d, d1 AS DOUBLE
 DIM SHARED ya1, ya2, xa1, xa2, xa, ya AS LONG
 DIM SHARED possible AS INTEGER
 DIM xs1, xs2, rb, ys1, ys2, rs, a, b, x, y AS SINGLE
+DIM s AS INTEGER
 
 CONST screenwidth = 1200
 CONST screenheight = 900
@@ -33,7 +34,7 @@ INPUT "X1:", x1
 
 INPUT "Y1:", y1
 
-IF (x1 ^ 2 + y1 ^ 2) >= rb ^ 2 OR (x1 ^ 2 + y1 ^ 2) <= rs ^ 2 THEN
+IF (x1 ^ 2 + y1 ^ 2) > rb ^ 2 OR (x1 ^ 2 + y1 ^ 2) < rs ^ 2 THEN
     DO:
         PRINT "This point exceeds the robots max radius."
         PRINT "Give new point."
@@ -60,7 +61,7 @@ INPUT "Y2:", y2
 LINE (getx(x1), gety(y1))-(getx(x2), gety(y2)), 7
 CALL display_arm(x1, y1, xa, ya, 5)
 
-IF (x2 ^ 2 + y2 ^ 2) >= rb ^ 2 OR (x2 ^ 2 + y2 ^ 2) <= rs ^ 2 THEN
+IF (x2 ^ 2 + y2 ^ 2) > rb ^ 2 OR (x2 ^ 2 + y2 ^ 2) < rs ^ 2 THEN
     DO:
         PRINT "This point exceeds the robots max radius."
         PRINT "Give new point."
@@ -68,8 +69,6 @@ IF (x2 ^ 2 + y2 ^ 2) >= rb ^ 2 OR (x2 ^ 2 + y2 ^ 2) <= rs ^ 2 THEN
         INPUT "Y2:", y2
     LOOP UNTIL x2 ^ 2 + y2 ^ 2 < rb ^ 2 AND x2 ^ 2 + y2 ^ 2 > rs ^ 2
 END IF
-
-INPUT "Give the time that you want the robot to move:", Q
 
 possible = 0
 
@@ -99,6 +98,10 @@ ELSE
 END IF
 
 CALL msg(possible)
+
+IF possible = 1 THEN
+    INPUT "Give the time that you want the robot to move:", Q
+END IF
 
 IF x1 <> x2 AND possible = 1 THEN
     IF x1 > x2 THEN
@@ -158,6 +161,11 @@ ELSEIF x1 = x2 AND possible = 1 THEN
     END IF
 END IF
 
+INPUT "If you want to restart the program press 1 else 0:", s
+IF s = 1 THEN
+    GOTO main
+END IF
+
 END
 
 SUB design_axes (mycolor AS INTEGER, center AS INTEGER)
@@ -199,7 +207,6 @@ SUB find_point (x AS INTEGER, y AS INTEGER)
         END IF
     END IF
     IF t = 0 THEN
-
         f11 = angle(xa1, ya1)
         f21 = angle(x - xa1, y - ya1) - f11
         f12 = angle(xa2, ya2)
@@ -214,7 +221,7 @@ SUB find_point (x AS INTEGER, y AS INTEGER)
             IF f21 >= 0 AND f21 < _PI THEN
                 xa = xa1
                 ya = ya1
-            ELSEIF f22 >= 0 AND f22 < _PI THEN
+            ELSE
                 xa = xa2
                 ya = ya2
             END IF
@@ -222,7 +229,7 @@ SUB find_point (x AS INTEGER, y AS INTEGER)
             IF f21 >= _PI AND f21 < 2 * _PI THEN
                 xa = xa1
                 ya = ya1
-            ELSEIF f22 >= _PI AND f22 < 2 * _PI THEN
+            ELSE
                 xa = xa2
                 ya = ya2
             END IF
@@ -251,14 +258,13 @@ SUB display_arm (xt AS SINGLE, yt AS SINGLE, xa AS SINGLE, ya AS SINGLE, k AS IN
     NEXT i
 END SUB
 
-SUB distance_comp (x1, x2, xs1, xs2, y1, y2, ys1, ys2, d)
+SUB distance_comp (x1 AS SINGLE, x2 AS SINGLE, xs1 AS SINGLE, xs2 AS SINGLE, y1 AS SINGLE, y2 AS SINGLE, ys1 AS SINGLE, ys2 AS SINGLE, d AS DOUBLE)
     IF d > 0 THEN
         Dp1p2 = (((y2 - y1) ^ 2) + ((x2 - x1) ^ 2)) ^ 0.5
-        PRINT Dp1p2
-        Dp1s1 = (((ys1 - y1) ^ 2) + ((xs1 - x1) ^ 2)) ^ 0.5
-        Dp1s2 = (((ys2 - y1) ^ 2) + ((xs2 - x1) ^ 2)) ^ 0.5
-        Dp2s1 = (((ys1 - y2) ^ 2) + ((xs1 - x2) ^ 2)) ^ 0.5
-        Dp2s2 = (((ys2 - y2) ^ 2) + ((xs2 - x2) ^ 2)) ^ 0.5
+        Dp1s1 = SQR(((ys1 - y1) ^ 2) + ((xs1 - x1) ^ 2))
+        Dp1s2 = SQR(((ys2 - y1) ^ 2) + ((xs2 - x1) ^ 2))
+        Dp2s1 = SQR(((ys1 - y2) ^ 2) + ((xs1 - x2) ^ 2))
+        Dp2s2 = SQR(((ys2 - y2) ^ 2) + ((xs2 - x2) ^ 2))
         IF Dp1s1 >= Dp1s2 THEN
             min0 = Dp1s2
         ELSEIF Dp1s2 > Dp1s1 THEN
@@ -277,7 +283,7 @@ SUB distance_comp (x1, x2, xs1, xs2, y1, y2, ys1, ys2, d)
         IF max >= Dp1p2 THEN
             possible = 1
         ELSEIF max < Dp1p2 THEN
-            CALL msg(2)
+            possible = 0
         END IF
     ELSE
         possible = 1
@@ -287,8 +293,6 @@ END SUB
 SUB msg (possible AS INTEGER)
     IF possible = 0 THEN
         PRINT "The line intersects with the interior restriction circle."
-    ELSEIF possible = 2 THEN
-        PRINT "The line intersects with the exterior restriction circle."
     END IF
 END SUB
 
